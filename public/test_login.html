@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login API</title>
+</head>
+<body>
+    <h2>Test de connexion</h2>
+    <input type="email" id="email" placeholder="Email" value="admin@techshop.com">
+    <input type="password" id="password" placeholder="Mot de passe" value="password">
+    <button onclick="testLogin()">Tester</button>
+    <pre id="result"></pre>
+
+    <script>
+    async function testLogin() {
+        const email = document.getElementById('email').value;
+        const mot_de_passe = document.getElementById('password').value;
+        
+        try {
+            const response = await fetch('/techshop/api/utilisateurs/login.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, mot_de_passe })
+            });
+            
+            const data = await response.json();
+            document.getElementById('result').innerHTML = JSON.stringify(data, null, 2);
+        } catch(error) {
+            document.getElementById('result').innerHTML = 'Erreur: ' + error.message;
+        }
+    }
+    </script>
+</body>
+</html>

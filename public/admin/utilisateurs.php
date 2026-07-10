@@ -1,5 +1,6 @@
 <?php
 session_start();
+$is_admin_page = true;
 
 if(!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: /techshop/public/connexion.php');

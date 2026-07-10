@@ -177,7 +177,7 @@ include '../views/header.php';
 </section>
 
 <script>
-fetch('/techshop/api/produits/index.php?limit=4')
+fetch('/api/produits/index.php?limit=4')
     .then(res => res.json())
     .then(response => {
         const container = document.getElementById('produits');

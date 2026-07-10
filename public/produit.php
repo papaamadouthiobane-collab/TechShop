@@ -1,143 +1,121 @@
 <?php
 session_start();
-$page_title = "Mon panier";
+$page_title = "Détail produit";
 include '../views/header.php';
+
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 ?>
 
-<div class="max-w-6xl mx-auto">
-    <h1 class="text-3xl font-bold text-gray-800 mb-8">🛒 Mon panier</h1>
-    
-    <div id="panier-vide" class="hidden text-center py-16 bg-white rounded-2xl shadow-md">
-        <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-4"></i>
-        <p class="text-gray-500 text-lg">Votre panier est vide</p>
-        <a href="catalogue.php" class="inline-block mt-4 bg-[#1e3a8a] text-white px-6 py-3 rounded-xl hover:bg-[#1e40af] transition">
-            <i class="fas fa-shop"></i> Continuer mes achats
-        </a>
-    </div>
-    
-    <div id="panier-contenu" class="hidden">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2">
-                <div id="articles" class="space-y-4"></div>
-            </div>
-            <div>
-                <div class="bg-white rounded-2xl shadow-md p-6 sticky top-24">
-                    <h3 class="text-xl font-bold mb-4">Récapitulatif</h3>
-                    <div class="space-y-3 border-b pb-4">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Sous-total</span>
-                            <span id="sous-total" class="font-semibold">0 FCFA</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Livraison</span>
-                            <span class="font-semibold text-green-600">Gratuite</span>
-                        </div>
-                    </div>
-                    <div class="flex justify-between mt-4 text-xl font-bold">
-                        <span>Total</span>
-                        <span id="total" class="text-[#1e3a8a]">0 FCFA</span>
-                    </div>
-                    <button id="valider-commande" class="w-full mt-6 bg-[#1e3a8a] text-white py-3 rounded-xl hover:bg-[#1e40af] transition">
-                        <i class="fas fa-check"></i> Valider la commande
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="max-w-5xl mx-auto" id="produit">
+    <div class="loader"></div>
 </div>
 
 <script>
-const token = localStorage.getItem('token');
-if(!token) {
-    window.location.href = 'connexion.php';
-}
+const productId = <?php echo $id; ?>;
 
-function getImageUrl(produit) {
-    if(produit.image_url && produit.image_url !== '') {
-        return '/techshop/public' + produit.image_url;
-    }
-    return 'https://placehold.co/100x100/1e3a8a/white?text=' + encodeURIComponent(produit.nom);
-}
-
-function chargerPanier() {
-    fetch('/techshop/api/panier/afficher.php', {
-        headers: { 'Authorization': 'Bearer ' + token }
+function ajouterPanier(produitId) {
+    fetch('/techshop/api/panier/ajouter.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ produit_id: produitId, quantite: 1 })
     })
     .then(res => res.json())
     .then(data => {
-        if(!data.length) {
-            document.getElementById('panier-vide').classList.remove('hidden');
-            document.getElementById('panier-contenu').classList.add('hidden');
-            return;
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Ajouté !',
+                text: 'Produit ajouté au panier',
+                timer: 1500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        } else if (data.error === 'Non authentifié') {
+            Swal.fire({
+                title: 'Connexion requise',
+                text: 'Veuillez vous connecter pour ajouter au panier',
+                icon: 'warning',
+                confirmButtonText: 'Se connecter'
+            }).then(() => {
+                window.location.href = 'connexion.php';
+            });
+        } else {
+            Swal.fire('Erreur', data.error || 'Une erreur est survenue', 'error');
         }
-        
-        document.getElementById('panier-vide').classList.add('hidden');
-        document.getElementById('panier-contenu').classList.remove('hidden');
-        
-        let total = 0;
-        const articlesHtml = data.map(item => {
-            total += item.prix_unitaire * item.quantite;
-            return `
-                <div class="bg-white rounded-2xl shadow-md p-4 flex flex-col sm:flex-row gap-4 items-center">
-                    <div class="w-20 h-20 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
-                        <img src="${getImageUrl(item)}" class="w-full h-full object-cover">
-                    </div>
-                    <div class="flex-1 text-center sm:text-left">
-                        <h4 class="font-bold">${item.nom}</h4>
-                        <p class="text-[#1e3a8a] font-bold">${parseFloat(item.prix_unitaire).toLocaleString()} FCFA</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <button onclick="modifierQuantite(${item.produit_id}, ${item.quantite - 1})" class="w-8 h-8 bg-gray-200 rounded-full hover:bg-gray-300">-</button>
-                        <span id="qty-${item.produit_id}" class="w-8 text-center font-semibold">${item.quantite}</span>
-                        <button onclick="modifierQuantite(${item.produit_id}, ${item.quantite + 1})" class="w-8 h-8 bg-gray-200 rounded-full hover:bg-gray-300">+</button>
-                    </div>
-                    <button onclick="supprimerArticle(${item.produit_id})" class="text-red-500 hover:text-red-700">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-        }).join('');
-        
-        document.getElementById('articles').innerHTML = articlesHtml;
-        document.getElementById('sous-total').innerHTML = total.toLocaleString() + ' FCFA';
-        document.getElementById('total').innerHTML = total.toLocaleString() + ' FCFA';
+    })
+    .catch(() => {
+        Swal.fire('Erreur', 'Impossible de se connecter au serveur', 'error');
     });
 }
 
-function modifierQuantite(produitId, nouvelleQuantite) {
-    if(nouvelleQuantite <= 0) {
-        supprimerArticle(produitId);
-        return;
-    }
-    
-    fetch('/techshop/api/panier/modifier.php', {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ produit_id: produitId, quantite: nouvelleQuantite })
+fetch(`/techshop/api/produits/detail.php?id=${productId}`)
+    .then(res => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
     })
-    .then(() => chargerPanier());
-}
-
-function supprimerArticle(produitId) {
-    fetch('/techshop/api/panier/supprimer.php', {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ produit_id: produitId })
+    .then(p => {
+        const container = document.getElementById('produit');
+        if (p.error || !p.id) {
+            container.innerHTML = `
+                <div class="text-center py-16 bg-white rounded-2xl shadow-md">
+                    <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+                    <p class="text-gray-500 text-lg">Produit non trouvé</p>
+                    <a href="catalogue.php" class="inline-block mt-4 bg-[#1e3a8a] text-white px-6 py-3 rounded-xl hover:bg-[#1e40af] transition">
+                        <i class="fas fa-arrow-left"></i> Retour au catalogue
+                    </a>
+                </div>
+            `;
+            return;
+        }
+        container.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+                    <img src="${p.image}" alt="${p.nom}" class="w-full h-auto object-cover" onerror="this.onerror=null; this.src='/techshop/public/assets/images/iphone.jpg';">
+                </div>
+                <div>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span class="bg-[#1e3a8a] text-white px-3 py-1 rounded-full text-xs font-medium">${p.marque}</span>
+                        <span class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs">${p.categorie_nom || 'Produit'}</span>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-4">${p.nom}</h1>
+                    <p class="text-gray-600 leading-relaxed mb-6">${p.description}</p>
+                    <div class="border-t border-b py-4 mb-6">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">💰 Prix :</span>
+                            <span class="text-3xl font-bold text-[#1e3a8a]">${parseFloat(p.prix).toLocaleString()} FCFA</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-gray-500">📦 Stock :</span>
+                            <span class="${p.stock > 0 ? 'text-green-600' : 'text-red-600'} font-semibold">
+                                ${p.stock > 0 ? `${p.stock} unités disponibles` : 'Rupture de stock'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button onclick="ajouterPanier(${p.id})" class="flex-1 bg-[#1e3a8a] text-white py-3 rounded-xl hover:bg-[#1e40af] transition flex items-center justify-center gap-2 font-semibold">
+                            <i class="fas fa-cart-plus"></i> Ajouter au panier
+                        </button>
+                        <a href="catalogue.php" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-300 transition text-center font-semibold">
+                            <i class="fas fa-arrow-left"></i> Retour
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
     })
-    .then(() => chargerPanier());
-}
-
-document.getElementById('valider-commande').addEventListener('click', () => {
-    window.location.href = 'commande.php';
-});
-
-chargerPanier();
+    .catch(err => {
+        console.error('Erreur:', err);
+        document.getElementById('produit').innerHTML = `
+            <div class="text-center py-16 bg-white rounded-2xl shadow-md">
+                <i class="fas fa-wifi text-6xl text-red-500 mb-4"></i>
+                <p class="text-gray-500 text-lg">Erreur de chargement</p>
+                <button onclick="location.reload()" class="mt-4 bg-[#1e3a8a] text-white px-6 py-3 rounded-xl hover:bg-[#1e40af] transition">
+                    <i class="fas fa-redo"></i> Réessayer
+                </button>
+            </div>
+        `;
+    });
 </script>
 
 <?php include '../views/footer.php'; ?>

@@ -38,8 +38,6 @@ include '../views/header.php';
                     <option value="Électroménager">🧺 Électroménager</option>
                     <option value="Accessoires">🎧 Accessoires</option>
                     <option value="Gaming">🎮 Gaming</option>
-                    
-
                 </select>
             </div>
             
@@ -105,17 +103,20 @@ function chargerProduits() {
     const tri = document.getElementById('tri').value;
     
     let url = '/techshop/api/produits/index.php?page=' + currentPage + '&limit=12';
-    if(search) url += '&search=' + encodeURIComponent(search);
-    if(marque) url += '&marque=' + encodeURIComponent(marque);
-    if(categorie) url += '&categorie=' + encodeURIComponent(categorie);
-    if(prix_min && prix_min != 0) url += '&prix_min=' + prix_min;
-    if(prix_max && prix_max != 5000) url += '&prix_max=' + prix_max;
-    if(tri && tri !== 'default') url += '&tri=' + tri;
+    if (search) url += '&search=' + encodeURIComponent(search);
+    if (marque) url += '&marque=' + encodeURIComponent(marque);
+    if (categorie) url += '&categorie=' + encodeURIComponent(categorie);
+    if (prix_min && prix_min != 0) url += '&prix_min=' + prix_min;
+    if (prix_max && prix_max != 5000) url += '&prix_max=' + prix_max;
+    if (tri && tri !== 'default') url += '&tri=' + tri;
     
     document.getElementById('produits').innerHTML = '<div class="col-span-full text-center py-10"><div class="loader"></div></div>';
     
     fetch(url)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+        })
         .then(response => {
             const container = document.getElementById('produits');
             const data = response.data || [];
@@ -124,7 +125,7 @@ function chargerProduits() {
             
             document.getElementById('produits-count').innerHTML = total > 0 ? total + ' produit(s) trouvé(s)' : '';
             
-            if(!data.length) {
+            if (!data.length) {
                 container.innerHTML = '<div class="col-span-full text-center py-16"><i class="fas fa-box-open text-6xl text-gray-300 mb-4"></i><p class="text-gray-500 text-lg">Aucun produit trouvé</p></div>';
                 document.getElementById('pagination').innerHTML = '';
                 return;
@@ -147,11 +148,7 @@ function chargerProduits() {
                             </div>
                             <p class="text-gray-500 text-xs mt-1 line-clamp-2">${(p.description_courte || p.description || '').substring(0, 70)}...</p>
                             <div class="flex items-center gap-1 my-2">
-                                <i class="fas fa-star text-yellow-400 text-xs"></i>
-                                <i class="fas fa-star text-yellow-400 text-xs"></i>
-                                <i class="fas fa-star text-yellow-400 text-xs"></i>
-                                <i class="fas fa-star text-yellow-400 text-xs"></i>
-                                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                                ${[...Array(5)].map(() => '<i class="fas fa-star text-yellow-400 text-xs"></i>').join('')}
                             </div>
                             <div class="mt-2">
                                 <span class="text-xl font-bold text-[#1e3a8a]">${parseFloat(p.prix).toLocaleString()} FCFA</span>
@@ -166,9 +163,9 @@ function chargerProduits() {
             
             container.innerHTML = html;
             
-            if(totalPages > 1) {
+            if (totalPages > 1) {
                 let paginationHtml = '';
-                for(let i = 1; i <= totalPages; i++) {
+                for (let i = 1; i <= totalPages; i++) {
                     paginationHtml += `<button onclick="goToPage(${i})" class="w-10 h-10 rounded-xl ${i === currentPage ? 'bg-[#1e3a8a] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition">${i}</button>`;
                 }
                 document.getElementById('pagination').innerHTML = paginationHtml;
@@ -201,39 +198,18 @@ function resetFiltres() {
 
 document.getElementById('appliquer_filtres').addEventListener('click', function() { currentPage = 1; chargerProduits(); });
 document.getElementById('reset_filtres').addEventListener('click', resetFiltres);
-document.getElementById('search').addEventListener('keypress', function(e) { if(e.key === 'Enter') { currentPage = 1; chargerProduits(); } });
+document.getElementById('search').addEventListener('keypress', function(e) { if (e.key === 'Enter') { currentPage = 1; chargerProduits(); } });
 document.getElementById('tri').addEventListener('change', function() { currentPage = 1; chargerProduits(); });
 
 chargerProduits();
 </script>
 
 <style>
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-.product-card {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 25px 35px -12px rgba(0,0,0,0.2);
-}
-.loader {
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #1e3a8a;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.product-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.product-card:hover { transform: translateY(-5px); box-shadow: 0 25px 35px -12px rgba(0,0,0,0.2); }
+.loader { border: 3px solid #f3f3f3; border-top: 3px solid #1e3a8a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
 
 <?php include '../views/footer.php'; ?>

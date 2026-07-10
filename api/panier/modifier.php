@@ -28,8 +28,30 @@ if(!$panier) {
     exit;
 }
 
-$stmt = $pdo->prepare("UPDATE lignes_panier SET quantite = ? WHERE panier_id = ? AND produit_id = ?");
-$stmt->execute([$quantite, $panier['id'], $produitId]);
+// Met à jour la quantité et recalcule/préserve le prix unitaire
+$stmt = $pdo->prepare("SELECT prix_unitaire FROM lignes_panier WHERE panier_id = ? AND produit_id = ?");
+$stmt->execute([$panier['id'], $produitId]);
+$ligne = $stmt->fetch();
+
+if(!$ligne) {
+    http_response_code(404);
+    echo json_encode(['error' => 'Ligne panier non trouvée']);
+    exit;
+}
+
+// Reprendre le prix courant du produit pour éviter un champ prix_unitaire NULL/incohérent
+$stmt = $pdo->prepare("SELECT prix FROM produits WHERE id = ?");
+$stmt->execute([$produitId]);
+$produit = $stmt->fetch();
+
+if(!$produit) {
+    http_response_code(404);
+    echo json_encode(['error' => 'Produit non trouvé']);
+    exit;
+}
+
+$stmt = $pdo->prepare("UPDATE lignes_panier SET quantite = ?, prix_unitaire = ? WHERE panier_id = ? AND produit_id = ?");
+$stmt->execute([$quantite, $produit['prix'], $panier['id'], $produitId]);
 
 echo json_encode(['success' => true]);
 ?>

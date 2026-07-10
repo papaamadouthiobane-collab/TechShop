@@ -3,7 +3,6 @@ header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 
 require_once __DIR__ . '/../../config/database.php';
-// require_once __DIR__ . '/../_auth_admin.php';  // ← SUPPRIME ou COMMENTE cette ligne
 
 function getProductImage($nom, $marque) {
     $nom_lower = strtolower($nom);
@@ -79,11 +78,10 @@ function getProductImage($nom, $marque) {
     ];
     
     foreach($mapping as $key => $file) {
-        if(strpos($nom_lower, $key) !== false) {
+        if (strpos($nom_lower, $key) !== false) {
             return $base_url . $file;
         }
     }
-    
     return $base_url . 'iphone.jpg';
 }
 
@@ -103,31 +101,29 @@ $sql = "SELECT p.*, c.nom as categorie_nom
         WHERE 1=1";
 $params = [];
 
-// Filtre prix optionnel (sinon on n'exclut pas des produits qui sortent des bornes par défaut)
 $sql .= " AND p.prix BETWEEN ? AND ?";
 $params[] = $prix_min;
 $params[] = $prix_max;
 
-
-if(!empty($search)) {
+if (!empty($search)) {
     $sql .= " AND (p.nom LIKE ? OR p.description LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
 }
-if(!empty($marque)) {
+if (!empty($marque)) {
     $sql .= " AND p.marque = ?";
     $params[] = $marque;
 }
-if(!empty($categorie)) {
+if (!empty($categorie)) {
     $sql .= " AND c.nom = ?";
     $params[] = $categorie;
 }
 
-if($tri === 'prix_asc') {
+if ($tri === 'prix_asc') {
     $sql .= " ORDER BY p.prix ASC";
-} elseif($tri === 'prix_desc') {
+} elseif ($tri === 'prix_desc') {
     $sql .= " ORDER BY p.prix DESC";
-} elseif($tri === 'nom_asc') {
+} elseif ($tri === 'nom_asc') {
     $sql .= " ORDER BY p.nom ASC";
 } else {
     $sql .= " ORDER BY p.id DESC";
@@ -143,20 +139,20 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $produits = $stmt->fetchAll();
 
-foreach($produits as &$p) {
+foreach ($produits as &$p) {
     $p['image'] = getProductImage($p['nom'], $p['marque']);
     $p['rating'] = 4.5;
     $p['avis'] = rand(10, 500);
     $p['description_courte'] = substr($p['description'], 0, 80);
 }
 
-$response = array(
+$response = [
     'data' => $produits,
     'total' => $total,
     'page' => $page,
     'limit' => $limit,
     'total_pages' => ceil($total / $limit)
-);
+];
 
 echo json_encode($response);
 ?>

@@ -99,7 +99,7 @@ function getImageUrl(item) {
 }
 
 function chargerPanier() {
-    fetch('/techshop/api/panier/afficher.php')
+fetch('/techshop/api/panier/afficher.php')
     .then(res => res.json())
     .then(data => {
         if(!data.length) {
@@ -113,7 +113,7 @@ function chargerPanier() {
         
         let total = 0;
         const articlesHtml = data.map(item => {
-            total += item.prix_unitaire * item.quantite;
+            total += (parseFloat(item.prix_unitaire) || 0) * (parseInt(item.quantite, 10) || 0);
             const imageUrl = getImageUrl(item);
             return `
                 <div class="bg-white rounded-2xl shadow-md p-4 flex flex-col sm:flex-row gap-4 items-center">
